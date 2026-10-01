@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de notas del mástil</title>
+<style>
+:root{
+  --bg:#111318; --panel:#1b1e25; --panel2:#242832;
+  --text:#f1f3f5; --muted:#9aa1ad;
+  --wood1:#765035; --wood2:#4b2d20;
+  --accent:#ffb000;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; padding:28px;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  background:radial-gradient(circle at top,#20242c 0,var(--bg) 55%);
+  color:var(--text)
+}
+.app{max-width:1500px;margin:auto}
+h1{margin:0 0 5px;font-size:30px}
+.subtitle{color:var(--muted);margin-bottom:20px}
+.controls{
+  background:var(--panel);border:1px solid #303540;border-radius:14px;
+  padding:15px;display:flex;flex-wrap:wrap;gap:12px 20px;
+  align-items:center;margin-bottom:14px
+}
+.control-group{display:flex;align-items:center;gap:8px}
+label{color:var(--muted);font-size:14px}
+select,button{
+  border:1px solid #414754;background:var(--panel2);color:var(--text);
+  border-radius:8px;padding:8px 11px;font-size:15px
+}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+.note-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.note-btn{min-width:42px;font-weight:700}
+.note-btn.active{background:var(--accent);color:#17120a;border-color:var(--accent)}
+.info{color:var(--muted);font-size:14px;margin:10px 0 17px}
+.info strong{color:var(--text)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.dot.target{background:var(--accent)}
+.board-wrap{
+  overflow-x:auto;background:#0d0f13;border:1px solid #303540;
+  border-radius:14px;padding:18px 14px 22px
+}
+.board{min-width:1120px;position:relative}
+.fret-numbers{
+  display:grid;
+  grid-template-columns:92px repeat(25,minmax(40px,1fr));
+  height:30px;align-items:center;text-align:center;
+  color:var(--muted);font-size:12px
+}
+.fret-numbers>div:first-child{text-align:left;padding-left:5px}
+.neck{
+  position:relative;
+  display:grid;
+  grid-template-columns:92px repeat(25,minmax(40px,1fr));
+  grid-template-rows:repeat(6,58px);
+  background:linear-gradient(90deg,var(--wood2),var(--wood1) 15%,#815438 50%,var(--wood2));
+  border-radius:5px 10px 10px 5px;overflow:hidden;
+  border-left:12px solid #222;
+  box-shadow:inset 0 0 20px #0008,0 10px 25px #0008
+}
+.string-label{
+  z-index:3;display:flex;align-items:center;padding-left:8px;
+  font-weight:700;color:#f5e8df;background:#2d211b88;
+  border-right:2px solid #222
+}
+.cell{
+  position:relative;z-index:3;border-right:2px solid #c4c7cb;
+  display:flex;align-items:center;justify-content:center
+}
+.cell.open{border-right:5px solid #a9adb3}
+.cell:not(.open){border-right-color:#d0d2d5}
+.cell::before{
+  content:"";position:absolute;left:0;right:0;top:50%;
+  height:var(--string-height);transform:translateY(-50%);
+  background:#d9d9d9;box-shadow:0 1px 2px #0008;pointer-events:none
+}
+.note{
+  position:relative;z-index:5;width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:transparent;
+  border:2px solid transparent;user-select:none
+}
+.note.target{
+  color:#17120a;background:var(--accent);border-color:#ffe09a;
+  box-shadow:0 0 0 4px #ffb00022,0 0 18px #ffb000aa
+}
+.note.other{color:#fff;background:#111b;border-color:#fff3}
+.note.root{
+  color:#17120a;background:#ffb000;border-color:#ffe09a;
+  box-shadow:0 0 0 3px #ffb00022,0 0 14px #ffb00088
+}
+.note.third{
+  color:#101010;background:#64d2ff;border-color:#c9f2ff;
+  box-shadow:0 0 0 3px #64d2ff22,0 0 12px #64d2ff66
+}
+.note.fifth{
+  color:#101010;background:#8ee38e;border-color:#d8ffd8;
+  box-shadow:0 0 0 3px #8ee38e22,0 0 12px #8ee38e66
+}
+
+.markers{
+  position:absolute;z-index:1;left:92px;right:0;top:0;bottom:0;
+  display:grid;grid-template-columns:repeat(25,minmax(40px,1fr));
+  pointer-events:none
+}
+.marker{position:relative}
+.marker::after{
+  content:"";position:absolute;width:11px;height:11px;border-radius:50%;
+  background:#e6e6e688;left:50%;top:50%;transform:translate(-50%,-50%)
+}
+.marker.double::before{
+  content:"";position:absolute;width:11px;height:11px;border-radius:50%;
+  background:#e6e6e688;left:50%;top:calc(50% + 17px);
+  transform:translate(-50%,-50%)
+}
+/* La columna 0 es la cuerda al aire: no lleva punto de traste. */
+.marker.empty::after,.marker.empty::before{display:none}
+.legend{margin-top:14px;color:var(--muted);font-size:13px}
+@media(max-width:800px){body{padding:12px}h1{font-size:24px}}
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <div class="control-group">
+    <label for="noteSelect">Nota:</label>
+    <select id="noteSelect"></select>
+  </div>
+  <div class="control-group">
+    <label for="frets">Hasta el traste:</label>
+    <select id="frets">
+      <option value="12">12</option>
+      <option value="15">15</option>
+      <option value="21">21</option>
+      <option value="22">22</option>
+      <option value="24" selected>24</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label for="chordType">Acorde:</label>
+    <select id="chordType">
+      <option value="major" selected>Mayor</option>
+      <option value="minor">Menor</option>
+    </select>
+  </div>
+  <button id="chordBtn">Mostrar acorde</button>
+  <button id="allBtn">Mostrar todas</button>
+</div>
+
+<div class="note-buttons" id="noteButtons"></div>
+
+<div class="info">
+  Afinación estándar: <strong>6ª E · 5ª A · 4ª D · 3ª G · 2ª B · 1ª E</strong>
+  &nbsp;&nbsp; <span class="dot target"></span>Nota seleccionada
+  <span id="chordInfo" style="display:none;margin-left:18px"></span>
+</div>
+
+<div class="board-wrap">
+  <div class="board">
+    <div class="fret-numbers" id="fretNumbers"></div>
+    <div class="neck" id="neck"></div>
+  </div>
+</div>
+
+<script>
+const NOTES=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const DISPLAY={"C♯":"C♯ / D♭","D♯":"D♯ / E♭","F♯":"F♯ / G♭","G♯":"G♯ / A♭","A♯":"A♯ / B♭"};
+
+const STRINGS=[
+  {name:"1ª · E",midi:64},
+  {name:"2ª · B",midi:59},
+  {name:"3ª · G",midi:55},
+  {name:"4ª · D",midi:50},
+  {name:"5ª · A",midi:45},
+  {name:"6ª · E",midi:40}
+];
+
+let selected="E", showAll=false, showChord=false, chordType="major", fretCount=24;
+
+const noteSelect=document.getElementById("noteSelect");
+const noteButtons=document.getElementById("noteButtons");
+const fretNumbers=document.getElementById("fretNumbers");
+const neck=document.getElementById("neck");
+const fretSelect=document.getElementById("frets");
+const chordTypeSelect=document.getElementById("chordType");
+const chordBtn=document.getElementById("chordBtn");
+const chordInfo=document.getElementById("chordInfo");
+const allBtn=document.getElementById("allBtn");
+
+NOTES.forEach(n=>{
+  const option=document.createElement("option");
+  option.value=n; option.textContent=DISPLAY[n]||n;
+  noteSelect.appendChild(option);
+
+  const btn=document.createElement("button");
+  btn.className="note-btn"; btn.textContent=n; btn.dataset.note=n;
+  btn.onclick=()=>setNote(n);
+  noteButtons.appendChild(btn);
+});
+
+noteSelect.value=selected;
+noteSelect.onchange=e=>setNote(e.target.value);
+fretSelect.onchange=e=>{fretCount=Number(e.target.value);render()};
+chordTypeSelect.onchange=e=>{chordType=e.target.value; if(showChord) render()};
+chordBtn.onclick=()=>{
+  showChord=!showChord;
+  showAll=false;
+  chordBtn.textContent=showChord?"Ocultar acorde":"Mostrar acorde";
+  allBtn.textContent="Mostrar todas";
+  render();
+};
+allBtn.onclick=()=>{
+  showAll=!showAll;
+  allBtn.textContent=showAll?"Mostrar solo seleccionada":"Mostrar todas";
+  render();
+};
+
+function setNote(note){
+  selected=note; showAll=false;
+  noteSelect.value=note;
+  allBtn.textContent="Mostrar todas";
+  render();
+}
+
+function pitchName(midi){return NOTES[midi%12]}
+
+function render(){
+  // Hay siempre una columna para la cuerda al aire (traste 0)
+  // y después una columna por cada traste real.
+  const columns=fretCount+1;
+  const cols=`92px repeat(${columns},minmax(40px,1fr))`;
+
+  fretNumbers.style.gridTemplateColumns=cols;
+  fretNumbers.innerHTML="<div>CUERDA</div>";
+
+  for(let fret=0;fret<=fretCount;fret++){
+    const d=document.createElement("div");
+    d.textContent=fret;
+    fretNumbers.appendChild(d);
+  }
+
+  neck.innerHTML="";
+  neck.style.gridTemplateColumns=cols;
+
+  // Marcadores: una columna para 0 + columnas 1..fretCount.
+  const markers=document.createElement("div");
+  markers.className="markers";
+  markers.style.gridTemplateColumns=`repeat(${columns},minmax(40px,1fr))`;
+
+  for(let fret=0;fret<=fretCount;fret++){
+    const m=document.createElement("div");
+    m.className="marker";
+
+    if(fret===0 || ![3,5,7,9,12,15,17,19,21,23].includes(fret)){
+      m.classList.add("empty");
+    }else if(fret===12){
+      m.classList.add("double");
+    }
+    markers.appendChild(m);
+  }
+  neck.appendChild(markers);
+
+  STRINGS.forEach((str,stringIndex)=>{
+    const label=document.createElement("div");
+    label.className="string-label";
+    label.textContent=str.name;
+    neck.appendChild(label);
+
+    const thickness=2+stringIndex*.7;
+
+    for(let fret=0;fret<=fretCount;fret++){
+      const cell=document.createElement("div");
+      cell.className="cell"+(fret===0?" open":"");
+      cell.style.setProperty("--string-height",`${thickness}px`);
+
+      const midi=str.midi+fret;
+      const note=pitchName(midi);
+
+      const noteEl=document.createElement("div");
+      noteEl.className="note";
+
+      const rootIndex=NOTES.indexOf(selected);
+      const interval=(NOTES.indexOf(note)-rootIndex+12)%12;
+      const thirdInterval=chordType==="major"?4:3;
+      let role="";
+
+      if(interval===0) role="Tónica";
+      else if(interval===thirdInterval) role="3ª";
+      else if(interval===7) role="5ª";
+
+      if(showChord && role){
+        noteEl.classList.add(
+          interval===0 ? "root" :
+          interval===thirdInterval ? "third" : "fifth"
+        );
+        noteEl.textContent=note;
+      }else if(showAll || note===selected){
+        noteEl.classList.add(note===selected?"target":"other");
+        noteEl.textContent=note;
+      }
+
+      noteEl.title=`${note} · ${str.name} · ${fret===0?"cuerda al aire":"traste "+fret}${role?" · "+role:""}`;
+      cell.appendChild(noteEl);
+      neck.appendChild(cell);
+    }
+  });
+
+  document.querySelectorAll(".note-btn").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.note===selected);
+  });
+
+  if(showChord){
+    const thirdName=NOTES[(NOTES.indexOf(selected)+(chordType==="major"?4:3))%12];
+    const fifthName=NOTES[(NOTES.indexOf(selected)+7)%12];
+    chordInfo.style.display="inline";
+    chordInfo.innerHTML=`Acorde <strong>${selected} ${chordType==="major"?"Mayor":"Menor"}</strong>:
+      <span class="dot" style="background:#ffb000"></span>Tónica ${selected}
+      &nbsp; <span class="dot" style="background:#64d2ff"></span>3ª ${thirdName}
+      &nbsp; <span class="dot" style="background:#8ee38e"></span>5ª ${fifthName}`;
+  }else{
+    chordInfo.style.display="none";
+  }
+}
+
+render();
+</script>
+</body>
+</html>
