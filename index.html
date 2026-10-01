@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa de notas del mástil</title>
+<title>Buscador de notas y acordes</title>
 <style>
 :root{
   --bg:#111318; --panel:#1b1e25; --panel2:#242832;
@@ -118,7 +118,7 @@ button:hover{border-color:var(--accent)}
   background:#e6e6e688;left:50%;top:calc(50% + 17px);
   transform:translate(-50%,-50%)
 }
-/* La columna 0 es la cuerda al aire: no lleva punto de traste. */
+/* Me aburro mecagoendios */
 .marker.empty::after,.marker.empty::before{display:none}
 .legend{margin-top:14px;color:var(--muted);font-size:13px}
 @media(max-width:800px){body{padding:12px}h1{font-size:24px}}
@@ -230,8 +230,6 @@ function setNote(note){
 function pitchName(midi){return NOTES[midi%12]}
 
 function render(){
-  // Hay siempre una columna para la cuerda al aire (traste 0)
-  // y después una columna por cada traste real.
   const columns=fretCount+1;
   const cols=`92px repeat(${columns},minmax(40px,1fr))`;
 
@@ -247,7 +245,6 @@ function render(){
   neck.innerHTML="";
   neck.style.gridTemplateColumns=cols;
 
-  // Marcadores: una columna para 0 + columnas 1..fretCount.
   const markers=document.createElement("div");
   markers.className="markers";
   markers.style.gridTemplateColumns=`repeat(${columns},minmax(40px,1fr))`;
